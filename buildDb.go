@@ -27,45 +27,56 @@ type Sense struct {
 	Glosses []string `xml:"gloss"`
 }
 
-func main() {
-	data, err := os.Open("JMdict_e.gz")
+func parseJMdict(path string, handle func(Entry) error) error {
+	f, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer data.Close()
+	defer f.Close()
 
-	gz, err := gzip.NewReader(data)
+	gz, err := gzip.NewReader(f)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer gz.Close()
 
 	dec := xml.NewDecoder(gz)
 	dec.Strict = false
 
-	count := 0
 	for {
 		tok, err := dec.Token()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-
 		se, ok := tok.(xml.StartElement)
 		if !ok || se.Name.Local != "entry" {
 			continue
 		}
-
 		var e Entry
 		if err := dec.DecodeElement(&e, &se); err != nil {
-			log.Fatal(err)
+			return err
 		}
+		if err := handle(e); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func main() {
+	count := 0
+	err := parseJMdict("JMdict_e.gz", func(e Entry) error {
 		count++
 		if count%20000 == 0 {
 			fmt.Printf("%d: %+v\n", count, e.Kanji)
 		}
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println("total entries:", count)
+	fmt.Println("total:", count)
 }
