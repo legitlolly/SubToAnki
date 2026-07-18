@@ -1,0 +1,33 @@
+<entry>
+  <ent_seq>1352290</ent_seq>
+  <k_ele>
+    <keb>上がる</keb>
+    <ke_pri>ichi1</ke_pri>
+  </k_ele>
+  <k_ele>
+    <keb>騰がる</keb>
+    <ke_inf>&rK;</ke_inf>
+  </k_ele>
+  <r_ele>
+    <reb>あがる</reb>
+    <re_pri>ichi1</re_pri>
+  </r_ele>
+  <sense>
+    <pos>&v5r;</pos>
+    <pos>&vi;</pos>
+    <xref>上げる・あげる・1</xref>
+    <ant>下がる・さがる・1</ant>
+    <gloss>to rise</gloss>
+    <gloss>to go up</gloss>
+    <gloss>to come up</gloss>
+  </sense>
+  <sense>
+    <xref>お上がりください</xref>
+    <gloss>to enter (esp. from outdoors)</gloss>
+    <gloss>to come in</gloss>
+  </sense>
+  <sense>
+    <gloss>to get nervous</gloss>
+    <gloss>to get stage fright</gloss>
+  </sense>
+</entry>
