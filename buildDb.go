@@ -1,9 +1,10 @@
 package main
 
 import (
-	"bytes"
+	"compress/gzip"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -27,17 +28,44 @@ type Sense struct {
 }
 
 func main() {
-	data, err := os.ReadFile("example.xml")
+	data, err := os.Open("JMdict_e.gz")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer data.Close()
 
-	dec := xml.NewDecoder(bytes.NewReader(data))
-	dec.Strict = false
-
-	var e Entry
-	if err := dec.Decode(&e); err != nil {
+	gz, err := gzip.NewReader(data)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", e)
+	defer gz.Close()
+
+	dec := xml.NewDecoder(gz)
+	dec.Strict = false
+
+	count := 0
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		se, ok := tok.(xml.StartElement)
+		if !ok || se.Name.Local != "entry" {
+			continue
+		}
+
+		var e Entry
+		if err := dec.DecodeElement(&e, &se); err != nil {
+			log.Fatal(err)
+		}
+		count++
+		if count%20000 == 0 {
+			fmt.Printf("%d: %+v\n", count, e.Kanji)
+		}
+	}
+	fmt.Println("total entries:", count)
 }
