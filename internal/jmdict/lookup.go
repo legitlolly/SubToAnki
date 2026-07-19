@@ -43,7 +43,7 @@ func Lookup(word string) error {
 	for _, id := range ids {
 		var kanjiForms, readingForms []string
 
-		krows, err := db.Query(`SELECT text, info FROM kanji WHERE entry_id = ?`, id)
+		krows, err := db.Query(`SELECT text, info FROM kanji WHERE entry_id = ? ORDER BY priority, rowid`, id)
 		if err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func Lookup(word string) error {
 		}
 		krows.Close()
 
-		rrows, err := db.Query(`SELECT text FROM readings WHERE entry_id = ?`, id)
+		rrows, err := db.Query(`SELECT text FROM readings WHERE entry_id = ? ORDER BY priority, rowid`, id)
 		if err != nil {
 			return err
 		}
