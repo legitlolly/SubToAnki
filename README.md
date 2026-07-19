@@ -7,7 +7,7 @@ Current State -
 2. Lookup a given word in kana/kanji form and display all possible readings.
 
 TODO:
-1. Add priority sorting so that words show up in order of commonality.
+1. Add priority sorting so that words show up in order of commonality. *DONE*
 2. Create api for lookup feature to eventually be hosted on my local server.
 3. Integrate card creation by connect to anki
     i. First draft should just create a card with reading followed by meaning
