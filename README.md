@@ -15,6 +15,6 @@ TODO:
 5. Link browser extension to hosted backend api for querying and creating anki cards.
 6. Expand above process to work with multiple accounts not just personal - more for added complexity as hosting backend will cause a cost if distributed.
 7. Expand card creation to add whole sentence of collected word and potentially link to video or audio clip grab could be interesting?
-
+8. Option to create cards that cover both tadoushi and jidoushi terms.
 
 The above is non exhaustive just a general aim for me to check in on as I go. This is a personal project for myself to help with both japanese learning and technical skill improvement.
