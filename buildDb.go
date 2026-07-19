@@ -2,15 +2,17 @@ package main
 
 import (
 	"compress/gzip"
+	"database/sql"
 	"encoding/xml"
-	"fmt"
 	"io"
 	"log"
 	"os"
+
+	_ "modernc.org/sqlite"
 )
 
 type Entry struct {
-	Seq      int      `xml:"ent_seq"`
+	ID       int      `xml:"ent_seq"`
 	Kanji    []Kanji  `xml:"k_ele"`
 	Readings []string `xml:"r_ele>reb"`
 	Senses   []Sense  `xml:"sense"`
@@ -66,17 +68,51 @@ func parseJMdict(path string, handle func(Entry) error) error {
 	return nil
 }
 
-func main() {
+func createDB() error {
+	db, err := sql.Open("sqlite", "lookup.db")
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// PRimary key will be ent_seq from source
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY)`); err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
 	count := 0
-	err := parseJMdict("JMdict_e.gz", func(e Entry) error {
-		count++
-		if count%20000 == 0 {
-			fmt.Printf("%d: %+v\n", count, e.Kanji)
+	err = parseJMdict("JMdict_e.gz", func(e Entry) error {
+		if _, err := tx.Exec(`INSERT INTO entries(id) VALUES(?)`, e.ID); err != nil {
+			return err
 		}
+		count++
 		return nil
 	})
 	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM entries`).Scan(&n); err != nil {
+		return err
+	}
+	log.Printf("Rows in db = %d", n)
+
+	return nil
+}
+
+func main() {
+	if err := createDB(); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("total:", count)
 }
