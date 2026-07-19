@@ -7,20 +7,21 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
 type Entry struct {
-	ID       int      `xml:"ent_seq"`
-	Kanji    []Kanji  `xml:"k_ele"`
-	Readings []string `xml:"r_ele>reb"`
-	Senses   []Sense  `xml:"sense"`
+	ID       int       `xml:"ent_seq"`
+	Kanji    []Kanji   `xml:"k_ele"`
+	Readings []Reading `xml:"r_ele"`
+	Senses   []Sense   `xml:"sense"`
 }
 type Kanji struct {
 	Text      string   `xml:"keb"`
 	Frequency []string `xml:"ke_pri"` // How often its seen this is defined as
-	Info      string   `xml:"ke_inf"`
+	Info      []string `xml:"ke_inf"`
 }
 type Sense struct {
 	Pos     []string `xml:"pos"`  // There are multiple possible poses v5r & vi == godan and intransitive
@@ -28,6 +29,43 @@ type Sense struct {
 	Ants    []string `xml:"ant"`  // Words opposite
 	Glosses []string `xml:"gloss"`
 }
+type Reading struct {
+	Text      string   `xml:"reb"`
+	Frequency []string `xml:"re_pri"`
+	Info      []string `xml:"re_inf"`
+}
+
+// DB SCHEMA
+const schema = `
+CREATE TABLE IF NOT EXISTS entries (
+	id INTEGER PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS kanji (
+	entry_id  INTEGER,
+	text      TEXT,
+	frequency TEXT,
+	info      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS readings (
+	entry_id  INTEGER,
+	text      TEXT,
+	frequency TEXT,
+	info      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS senses (
+	id       INTEGER PRIMARY KEY,
+	entry_id INTEGER,
+	pos      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS glosses (
+	sense_id INTEGER,
+	text     TEXT
+);
+`
 
 func parseJMdict(path string, handle func(Entry) error) error {
 	f, err := os.Open(path)
@@ -75,8 +113,7 @@ func createDB() error {
 	}
 	defer db.Close()
 
-	// PRimary key will be ent_seq from source
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY)`); err != nil {
+	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
 
@@ -91,6 +128,45 @@ func createDB() error {
 			return err
 		}
 		count++
+		for _, k := range e.Kanji {
+			if _, err := tx.Exec(
+				`INSERT INTO kanji(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
+				e.ID, k.Text, strings.Join(k.Frequency, ","), strings.Join(k.Info, ","),
+			); err != nil {
+				return err
+			}
+		}
+
+		for _, r := range e.Readings {
+			if _, err := tx.Exec(
+				`INSERT INTO readings(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
+				e.ID, r.Text, strings.Join(r.Frequency, ","), strings.Join(r.Info, ","),
+			); err != nil {
+				return err
+			}
+		}
+
+		for _, s := range e.Senses {
+			res, err := tx.Exec(
+				`INSERT INTO senses(entry_id, pos) VALUES(?, ?)`,
+				e.ID, strings.Join(s.Pos, ","),
+			)
+			if err != nil {
+				return err
+			}
+			senseID, err := res.LastInsertId()
+			if err != nil {
+				return err
+			}
+			for _, g := range s.Glosses {
+				if _, err := tx.Exec(
+					`INSERT INTO glosses(sense_id, text) VALUES(?, ?)`,
+					senseID, g,
+				); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -112,6 +188,7 @@ func createDB() error {
 }
 
 func main() {
+	os.Remove("lookup.db")
 	if err := createDB(); err != nil {
 		log.Fatal(err)
 	}
