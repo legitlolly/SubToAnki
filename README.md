@@ -8,7 +8,7 @@ Current State -
 
 TODO:
 1. Add priority sorting so that words show up in order of commonality. *DONE*
-2. Index to reduce full scan on lookup
+2. Index to reduce full scan on lookup *DONE*
 3. Create api for lookup feature to eventually be hosted on my local server.
 4. Integrate card creation by connect to anki
     i. First draft should just create a card with reading followed by meaning
