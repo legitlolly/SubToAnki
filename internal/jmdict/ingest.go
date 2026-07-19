@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"strings"
+
+	_ "modernc.org/sqlite"
 )
 
 // DB SCHEMA

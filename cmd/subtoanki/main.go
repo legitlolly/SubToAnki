@@ -13,6 +13,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "ingest":
+		os.Remove("lookup.db")
 		if err := jmdict.CreateDB(); err != nil {
 			log.Fatal(err)
 		}
