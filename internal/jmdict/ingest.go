@@ -18,14 +18,14 @@ CREATE TABLE IF NOT EXISTS entries (
 CREATE TABLE IF NOT EXISTS kanji (
 	entry_id  INTEGER,
 	text      TEXT,
-	priority INTEGER,
+	priority  INTEGER,
 	info      TEXT
 );
 
 CREATE TABLE IF NOT EXISTS readings (
 	entry_id  INTEGER,
 	text      TEXT,
-	priority TEXT,
+	priority  INTEGER,
 	info      TEXT
 );
 

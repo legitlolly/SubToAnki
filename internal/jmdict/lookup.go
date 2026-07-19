@@ -91,10 +91,6 @@ func Lookup(word string) error {
 			return err
 		}
 
-		type senseGroup struct {
-			pos     string
-			glosses []string
-		}
 		var groups []senseGroup
 		lastID := -1
 		for srows.Next() {
