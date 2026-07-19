@@ -16,17 +16,17 @@ CREATE TABLE IF NOT EXISTS entries (
 );
 
 CREATE TABLE IF NOT EXISTS kanji (
-	entry_id  INTEGER,
-	text      TEXT,
-	priority  INTEGER,
-	info      TEXT
+	entry_id   INTEGER,
+	text       TEXT,
+	priority   INTEGER,
+	info       TEXT
 );
 
 CREATE TABLE IF NOT EXISTS readings (
-	entry_id  INTEGER,
-	text      TEXT,
-	priority  INTEGER,
-	info      TEXT
+	entry_id   INTEGER,
+	text       TEXT,
+	priority   INTEGER,
+	info       TEXT
 );
 
 CREATE TABLE IF NOT EXISTS senses (
@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS glosses (
 	sense_id INTEGER,
 	text     TEXT
 );
+`
+
+const indexes = `
+CREATE INDEX IF NOT EXISTS idx_kanji_text     ON kanji(text);
+CREATE INDEX IF NOT EXISTS idx_readings_text  ON readings(text);
+CREATE INDEX IF NOT EXISTS idx_kanji_entry    ON kanji(entry_id);
+CREATE INDEX IF NOT EXISTS idx_readings_entry ON readings(entry_id);
+CREATE INDEX IF NOT EXISTS idx_senses_entry   ON senses(entry_id);
+CREATE INDEX IF NOT EXISTS idx_glosses_sense  ON glosses(sense_id);
 `
 
 var codeRanks = map[string]int{
@@ -59,10 +68,12 @@ func calculatePriority(codes []string) int {
 	best := 999
 	for _, code := range codes {
 		rank := 999
-		// Most granular frequency 01-48 and most accurate so exit early
+		// Most granular frequency 01-48
 		if strings.HasPrefix(code, "nf") {
 			if n, err := strconv.Atoi(code[2:]); err == nil {
-				return n
+				if n < best {
+					best = n
+				}
 			}
 		} else if r, ok := codeRanks[code]; ok {
 			rank = r
@@ -146,7 +157,10 @@ func CreateDB() error {
 		tx.Rollback()
 		return err
 	}
-
+	if _, err := tx.Exec(indexes); err != nil {
+		tx.Rollback()
+		return err
+	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
