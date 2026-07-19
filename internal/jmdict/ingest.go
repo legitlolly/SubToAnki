@@ -3,6 +3,7 @@ package jmdict
 import (
 	"database/sql"
 	"log"
+	"strconv"
 	"strings"
 
 	_ "modernc.org/sqlite"
@@ -17,14 +18,14 @@ CREATE TABLE IF NOT EXISTS entries (
 CREATE TABLE IF NOT EXISTS kanji (
 	entry_id  INTEGER,
 	text      TEXT,
-	frequency TEXT,
+	priority INTEGER,
 	info      TEXT
 );
 
 CREATE TABLE IF NOT EXISTS readings (
 	entry_id  INTEGER,
 	text      TEXT,
-	frequency TEXT,
+	priority TEXT,
 	info      TEXT
 );
 
@@ -40,10 +41,37 @@ CREATE TABLE IF NOT EXISTS glosses (
 );
 `
 
+var codeRanks = map[string]int{
+	"ichi1": 10, "news1": 10, "spec1": 10, "gai1": 10,
+	"ichi2": 25, "news2": 25, "spec2": 25, "gai2": 25,
+}
+
 func cleanEntities(vals []string) {
 	for i, v := range vals {
 		vals[i] = strings.Trim(v, "&;")
 	}
+}
+
+func calculatePriority(codes []string) int {
+	if len(codes) == 0 {
+		return 999
+	}
+	best := 999
+	for _, code := range codes {
+		rank := 999
+		// Most granular frequency 01-48 and most accurate so exit early
+		if strings.HasPrefix(code, "nf") {
+			if n, err := strconv.Atoi(code[2:]); err == nil {
+				return n
+			}
+		} else if r, ok := codeRanks[code]; ok {
+			rank = r
+		}
+		if rank < best {
+			best = rank
+		}
+	}
+	return best
 }
 
 func CreateDB() error {
@@ -70,9 +98,10 @@ func CreateDB() error {
 		count++
 		for _, k := range e.Kanji {
 			cleanEntities(k.Info)
+			priority := calculatePriority(k.Frequency)
 			if _, err := tx.Exec(
-				`INSERT INTO kanji(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
-				e.ID, k.Text, strings.Join(k.Frequency, ","), strings.Join(k.Info, ","),
+				`INSERT INTO kanji(entry_id, text, priority, info) VALUES(?, ?, ?, ?)`,
+				e.ID, k.Text, priority, strings.Join(k.Info, ","),
 			); err != nil {
 				return err
 			}
@@ -80,9 +109,10 @@ func CreateDB() error {
 
 		for _, r := range e.Readings {
 			cleanEntities(r.Info)
+			priority := calculatePriority(r.Frequency)
 			if _, err := tx.Exec(
-				`INSERT INTO readings(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
-				e.ID, r.Text, strings.Join(r.Frequency, ","), strings.Join(r.Info, ","),
+				`INSERT INTO readings(entry_id, text, priority, info) VALUES(?, ?, ?, ?)`,
+				e.ID, r.Text, priority, strings.Join(r.Info, ","),
 			); err != nil {
 				return err
 			}
