@@ -106,6 +106,12 @@ func parseJMdict(path string, handle func(Entry) error) error {
 	return nil
 }
 
+func cleanEntities(vals []string) {
+	for i, v := range vals {
+		vals[i] = strings.Trim(v, "&;")
+	}
+}
+
 func createDB() error {
 	db, err := sql.Open("sqlite", "lookup.db")
 	if err != nil {
@@ -129,6 +135,7 @@ func createDB() error {
 		}
 		count++
 		for _, k := range e.Kanji {
+			cleanEntities(k.Info)
 			if _, err := tx.Exec(
 				`INSERT INTO kanji(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
 				e.ID, k.Text, strings.Join(k.Frequency, ","), strings.Join(k.Info, ","),
@@ -138,6 +145,7 @@ func createDB() error {
 		}
 
 		for _, r := range e.Readings {
+			cleanEntities(r.Info)
 			if _, err := tx.Exec(
 				`INSERT INTO readings(entry_id, text, frequency, info) VALUES(?, ?, ?, ?)`,
 				e.ID, r.Text, strings.Join(r.Frequency, ","), strings.Join(r.Info, ","),
@@ -147,6 +155,7 @@ func createDB() error {
 		}
 
 		for _, s := range e.Senses {
+			cleanEntities(s.Pos)
 			res, err := tx.Exec(
 				`INSERT INTO senses(entry_id, pos) VALUES(?, ?)`,
 				e.ID, strings.Join(s.Pos, ","),
