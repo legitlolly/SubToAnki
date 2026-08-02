@@ -11,6 +11,20 @@ type senseGroup struct {
 	glosses []string
 }
 
+// JMdict marks rare or irregular forms "sK" (search-only kanji) and "sk"
+// (search-only kana). They should still match a lookup, but must never be shown
+// as a headword -- otherwise 大丈夫 lists だいじょーぶ alongside its real
+// readings. info is stored comma-joined and a form can carry several tags at
+// once ("ateji,sK"), so this is a membership test, not a string compare.
+func searchOnly(info string) bool {
+	for _, tag := range strings.Split(info, ",") {
+		if tag == "sK" || tag == "sk" {
+			return true
+		}
+	}
+	return false
+}
+
 func Lookup(word string) error {
 	db, err := sql.Open("sqlite", "lookup.db")
 	if err != nil {
@@ -53,22 +67,25 @@ func Lookup(word string) error {
 				krows.Close()
 				return err
 			}
-			if info == "sK" {
+			if searchOnly(info) {
 				continue
 			}
 			kanjiForms = append(kanjiForms, text)
 		}
 		krows.Close()
 
-		rrows, err := db.Query(`SELECT text FROM readings WHERE entry_id = ? ORDER BY priority, rowid`, id)
+		rrows, err := db.Query(`SELECT text, info FROM readings WHERE entry_id = ? ORDER BY priority, rowid`, id)
 		if err != nil {
 			return err
 		}
 		for rrows.Next() {
-			var text string
-			if err := rrows.Scan(&text); err != nil {
+			var text, info string
+			if err := rrows.Scan(&text, &info); err != nil {
 				rrows.Close()
 				return err
+			}
+			if searchOnly(info) {
+				continue
 			}
 			readingForms = append(readingForms, text)
 		}
